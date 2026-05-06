@@ -513,15 +513,6 @@ func (ep *EvalParams) computeAvailability() *resources {
 	return available
 }
 
-func largeProgramExtraBytes(proto *config.ConsensusParams, approval, clear []byte) uint64 {
-	basicAppProgramLimit := proto.MaxAppTotalProgramLen * (1 + proto.MaxExtraAppProgramPages)
-	programSize := len(approval) + len(clear)
-	if programSize <= basicAppProgramLimit {
-		return 0
-	}
-	return uint64(programSize - basicAppProgramLimit)
-}
-
 func (cx *EvalContext) considerBudgetProgramWrites() error {
 	creating := cx.txn.Txn.ApplicationID == 0
 	updating := cx.txn.Txn.OnCompletion == transactions.UpdateApplicationOC
@@ -537,7 +528,8 @@ func (cx *EvalContext) considerBudgetProgramWrites() error {
 	oldSize := cx.available.updateBytes[cx.appID]
 	cx.available.dirtyBytes = basics.SubSaturate(cx.available.dirtyBytes, oldSize)
 
-	newSize := largeProgramExtraBytes(cx.Proto, cx.txn.Txn.ApprovalProgram, cx.txn.Txn.ClearStateProgram)
+	newSize := uint64(transactions.LargeProgramExtraBytes(*cx.Proto,
+		len(cx.txn.Txn.ApprovalProgram)+len(cx.txn.Txn.ClearStateProgram)))
 	cx.available.dirtyBytes = basics.AddSaturate(cx.available.dirtyBytes, newSize)
 	cx.available.updateBytes[cx.appID] = newSize
 
@@ -1223,7 +1215,9 @@ func EvalContract(program []byte, gi int, aid basics.AppIndex, params *EvalParam
 			if err != nil {
 				continue // There may be an app reference that doesn't exist
 			}
-			used = basics.AddSaturate(used, largeProgramExtraBytes(cx.Proto, params.ApprovalProgram, params.ClearStateProgram))
+			extra := transactions.LargeProgramExtraBytes(*cx.Proto,
+				len(params.ApprovalProgram)+len(params.ClearStateProgram))
+			used = basics.AddSaturate(used, uint64(extra))
 		}
 
 		// Then count the total size of available boxes

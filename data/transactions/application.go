@@ -600,6 +600,13 @@ func (ac ApplicationCallTxnFields) WellSizedPrograms(extraPages uint32, proto co
 	return nil
 }
 
+// LargeProgramExtraBytes returns the number of bytes by which the given total
+// size of the programs exceeds the "free" size available without paying extra.
+func LargeProgramExtraBytes(proto config.ConsensusParams, totalProgramSize int) int {
+	basicAppProgramLimit := proto.MaxAppTotalProgramLen * (1 + proto.MaxExtraAppProgramPages)
+	return max(0, totalProgramSize-basicAppProgramLimit)
+}
+
 // feeContribution returns the amount an app call's basic fee factor should be
 // increased due to oversized app call data beyond standard limits.
 func (ac ApplicationCallTxnFields) feeContribution(proto config.ConsensusParams) basics.Micros {
@@ -607,8 +614,7 @@ func (ac ApplicationCallTxnFields) feeContribution(proto config.ConsensusParams)
 
 	// Add extra cost for program bytes beyond standard size.
 	totalProgramBytes := len(ac.ApprovalProgram) + len(ac.ClearStateProgram)
-	standardLimit := (1 + proto.MaxExtraAppProgramPages) * proto.MaxAppTotalProgramLen
-	surcharge, _ := proto.PerByteTxnSurcharge.MulInt(totalProgramBytes - standardLimit)
+	surcharge, _ := proto.PerByteTxnSurcharge.MulInt(LargeProgramExtraBytes(proto, totalProgramBytes))
 	cost = basics.AddSaturate(cost, surcharge)
 
 	// Add extra cost for app args bytes beyond standard size.
