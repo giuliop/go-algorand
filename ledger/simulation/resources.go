@@ -317,7 +317,7 @@ func (a *ResourceTracker) ioSurplus(amount int64, bytesPerBoxRef uint64) bool {
 		return false
 	}
 	emptyRefs := int(emptyRefsU64)
-	if emptyRefs >= a.MaxBoxes-a.boxCount() || emptyRefs >= a.MaxTotalRefs-a.refCount() {
+	if emptyRefs > a.MaxBoxes-a.boxCount() || emptyRefs > a.MaxTotalRefs-a.refCount() {
 		return false
 	}
 	a.NumEmptyBoxRefs += emptyRefs
