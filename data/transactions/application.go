@@ -586,13 +586,16 @@ func (ac ApplicationCallTxnFields) WellSizedPrograms(extraPages uint32, proto co
 	lcs := len(ac.ClearStateProgram)
 	pages := int(1 + extraPages)
 	if lap > pages*proto.MaxAppProgramLen {
-		return fmt.Errorf("approval program too long. max len %d bytes", pages*proto.MaxAppProgramLen)
+		return fmt.Errorf("approval program too long. (%d > %d)",
+			lap, pages*proto.MaxAppProgramLen)
 	}
 	if lcs > pages*proto.MaxAppProgramLen {
-		return fmt.Errorf("clear state program too long. max len %d bytes", pages*proto.MaxAppProgramLen)
+		return fmt.Errorf("clear state program too long. (%d > %d)",
+			lcs, pages*proto.MaxAppProgramLen)
 	}
 	if lap+lcs > pages*proto.MaxAppTotalProgramLen {
-		return fmt.Errorf("app programs too long. max total len %d bytes", pages*proto.MaxAppTotalProgramLen)
+		return fmt.Errorf("app programs too long. (%d + %d > %d)",
+			lap, lcs, pages*proto.MaxAppTotalProgramLen)
 	}
 	return nil
 }
