@@ -112,7 +112,7 @@ func makeGlobalResourceTracker(perTxnResources []ResourceTracker, nonAppCalls in
 	// Calculate the maximum number of cross-product resources that can be accessed by one app call
 	// under normal circumstances. This is calculated using the case of an app call with a full set
 	// of foreign apps. Including the app being called, there are (MaxAppTxnForeignApps + 1) apps,
-	// crossed with (MaxAppTxnForeignAssets + 2) accounts (the called app's account, the sender's
+	// crossed with (MaxAppTxnAccounts + 2) accounts (the called app's account, the sender's
 	// account, and the foreign app accounts). We then subtract out the app local of sender's
 	// account and the called app, and each app local of an app and its own account, or
 	// (MaxAppTxnForeignApps + 2) references. So we end up with:
