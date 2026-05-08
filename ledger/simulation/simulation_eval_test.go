@@ -8276,14 +8276,13 @@ int 1`, version),
 func assembleSizedPassingProgram(t testing.TB, version uint64, size int) []byte {
 	t.Helper()
 
-	const overhead = 6 // version byte + "b end" + "end: int 1"
+	const overhead = 4 // version byte + "pushint 1" + "return"
 	require.GreaterOrEqual(t, size, overhead)
 
 	var source strings.Builder
 	fmt.Fprintf(&source, "#pragma version %d\n", version)
-	source.WriteString("b end\n")
+	source.WriteString("pushint 1; return\n")
 	source.WriteString(strings.Repeat("err\n", size-overhead))
-	source.WriteString("end: int 1")
 
 	ops, err := logic.AssembleString(source.String())
 	require.NoError(t, err)
