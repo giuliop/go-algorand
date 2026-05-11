@@ -549,7 +549,7 @@ func (cx *EvalContext) considerBudgetProgramWrites() error {
 func feeCredit(txgroup []transactions.SignedTxnWithAD, proto config.ConsensusParams) basics.MicroAlgos {
 	usage, feesPaid := transactions.SummarizeFees(txgroup, proto)
 	feeNeeded, _ := proto.MinFee().MulMicrosCeil(usage)
-	return feesPaid.SubSaturate(feeNeeded) // If MulMicros saturates, this is 0
+	return feesPaid.SubSaturate(feeNeeded) // If MulMicrosCeil saturates, this is 0
 }
 
 // NewInnerEvalParams creates an EvalParams to be used while evaluating an inner group txgroup
