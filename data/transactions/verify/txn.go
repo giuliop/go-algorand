@@ -223,6 +223,14 @@ func txnGroupBatchPrep(stxs []transactions.SignedTxn, contextHdr *bookkeeping.Bl
 		if err := stxs[i].Txn.WellFormed(groupCtx.specAddrs, groupCtx.consensusParams); err != nil {
 			return nil, fmt.Errorf("transaction %+v invalid : %w", stxs[i], &TxGroupError{err: err, GroupIndex: i, Reason: TxGroupErrorReasonNotWellFormed})
 		}
+		// with PerByteTxnSurcharge orphan LogicSig args are not allowed
+		if groupCtx.consensusParams.TxnSizePricingEnabled() && stxs[i].Lsig.Blank() && stxs[i].Lsig.ArgsLen() > 0 {
+			return nil, &TxGroupError{
+				err:        errors.New("LogicSig args without LogicSig program"),
+				GroupIndex: i,
+				Reason:     TxGroupErrorReasonNotWellFormed,
+			}
+		}
 	}
 
 	if err := transactions.CheckTxnGroup(stxs); err != nil {
@@ -232,6 +240,9 @@ func txnGroupBatchPrep(stxs []transactions.SignedTxn, contextHdr *bookkeeping.Bl
 	lSigPooledSize := 0
 	lSigArgsSize := 0
 	lSigArgsNeedSizePooling := false
+
+	countOrphanLSigArgs := groupCtx.consensusParams.MaxAbsoluteLogicSigProgramSize > groupCtx.consensusParams.LogicSigMaxSize ||
+		groupCtx.consensusParams.TxnSizePricingEnabled()
 	for i, stxn := range stxs {
 		prepErr := txnBatchPrep(i, groupCtx, batch)
 		if prepErr != nil {
@@ -239,22 +250,10 @@ func txnGroupBatchPrep(stxs []transactions.SignedTxn, contextHdr *bookkeeping.Bl
 			prepErr.err = fmt.Errorf("transaction %+v invalid : %w", stxn, prepErr.err)
 			return nil, prepErr
 		}
-		if stxn.Lsig.Blank() {
-			switch groupCtx.consensusParams.OrphanLogicSigArgsTreatment() {
-			case config.OrphanLogicSigArgsIgnore:
-				continue
-			case config.OrphanLogicSigArgsReject:
-				if stxn.Lsig.ArgsLen() > 0 {
-					return nil, &TxGroupError{
-						err:        errors.New("LogicSig args without LogicSig program"),
-						GroupIndex: i,
-						Reason:     TxGroupErrorReasonNotWellFormed,
-					}
-				}
-			case config.OrphanLogicSigArgsUsePool:
-				// Count below.
-			}
+		if stxn.Lsig.Blank() && !countOrphanLSigArgs {
+			continue
 		}
+
 		lSigPooledSize += stxn.Lsig.Len()
 		lSigArgsSize += stxn.Lsig.ArgsLen()
 		if uint64(stxn.Lsig.ArgsLen()) > groupCtx.consensusParams.MaxLogicSigArgsSize {

@@ -1188,19 +1188,15 @@ var dryrunCmd = &cobra.Command{
 		lSigPooledSize := 0
 		lSigArgsSize := 0
 		lSigArgsNeedSizePooling := false
+		countOrphanLSigArgs := params.MaxAbsoluteLogicSigProgramSize > params.LogicSigMaxSize ||
+			params.TxnSizePricingEnabled()
+
 		for i, txn := range stxns {
-			if txn.Lsig.Blank() {
-				switch params.OrphanLogicSigArgsTreatment() {
-				case config.OrphanLogicSigArgsIgnore:
-					continue
-				case config.OrphanLogicSigArgsReject:
-					if txn.Lsig.ArgsLen() == 0 {
-						continue
-					}
-					reportErrorf("LogicSig args without LogicSig program")
-				case config.OrphanLogicSigArgsUsePool:
-					// Count below.
-				}
+			if params.TxnSizePricingEnabled() && txn.Lsig.Blank() && txn.Lsig.ArgsLen() > 0 {
+				reportErrorf("LogicSig args without LogicSig program")
+			}
+			if txn.Lsig.Blank() && !countOrphanLSigArgs {
+				continue
 			}
 			lSigPooledSize += txn.Lsig.Len()
 			lSigArgsSize += txn.Lsig.ArgsLen()
